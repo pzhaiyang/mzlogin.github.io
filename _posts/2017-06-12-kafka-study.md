@@ -1,6 +1,6 @@
 ---
 layout: post
-title: kafka使用教学
+title: 大哥你MMP
 categories: 分布式
 description: kafka
 keywords: Kafka
