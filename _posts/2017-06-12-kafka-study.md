@@ -12,7 +12,7 @@ keywords: Kafka
 
 Kafka凭借着自身的优势，越来越受到互联网企业的青睐，唯品会也采用Kafka作为其内部核心消息引擎之一。Kafka作为一个商业级消息中间件，消息可靠性的重要性可想而知。如何确保消息的精确传输？如何确保消息的准确存储？如何确保消息的正确消费？这些都是需要考虑的问题。本文首先从Kafka的架构着手，先了解下Kafka的基本原理，然后通过对kakfa的存储机制、复制原理、同步原理、可靠性和持久性保证等等一步步对其可靠性进行分析，最后通过benchmark来增强对Kafka高可靠性的认知。。
 
-< img src="/images/kafka.png" width = "300" height = "300" alt="images" align=center />
+`![](my_pics/kafka.png)`
 ```vb
 Sub 分离()
     Application.ScreenUpdating = False

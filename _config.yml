@@ -4,10 +4,10 @@
 baseurl:
 url: http://zhanghaiyang.org
 date_format: "ordinal"
-title: 秋名山
-subtitle: "开车改变人生"
+title: 养码场
+subtitle: "屌丝程序员的成长之路"
 description: "张海洋的个人博客"
-keywords: 码志, Zhang Haiyang, haiyangzhang
+keywords: 养码场, Zhang Haiyang, haiyangzhang
 favicon: /favicon.ico
 timezone: Asia/Shanghai
 encoding: "utf-8"
