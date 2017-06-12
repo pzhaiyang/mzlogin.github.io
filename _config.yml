@@ -17,9 +17,9 @@ side_bar_repo_limit: 5
 #      Author      #
 # ---------------- #
 author: Haiyang Zhang
-organization: zkh360.com
-organization_url: http://www.zkh360.com
-github_username: mzlogin
+organization: jd.com
+organization_url: http://www.jd.com
+github_username: pzhaiyang
 location: NanJing, China
 email: 18761600650@163.com
 
@@ -78,7 +78,7 @@ collections:
         output: true
         permalink: /wiki/:path/
 
-repository: mzlogin/mzlogin.github.io
+repository: pzhaiyang/pzhaiyang.github.io
 
 # ---------------- #
 #      Comments    #
