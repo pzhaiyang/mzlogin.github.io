@@ -17,10 +17,24 @@ Kafka凭借着自身的优势，越来越受到互联网企业的青睐，唯品
 如上图所示，Kafka体系由N个Producer，N个borker，N个Consumer，以及一个Zookeeper集群组成，Zookeeper在这里主要管理集群leader选举，负载均衡等工作，Producer将消息push到broker中，Consumer则相应在broker的订阅并pull消息。
 
 ## Topic&Partition&segment
-**熟悉MQ的朋友们应该都知道，topic是一类消息的集合，在kafka中，topic又可以分为若干个Partition，partition在存储层面是append log文件。新发布到此partition的消息都会被追加到log文件的尾部，同时以offset去唯一标记这条消息。这种写消息的方式是顺序写磁盘，这样保证了kafka的高吞吐量。
+熟悉MQ的朋友们应该都知道，topic是一类消息的集合，在kafka中，topic又可以分为若干个Partition，partition在存储层面是append log文件。新发布到此partition的消息都会被追加到log文件的尾部，同时以offset去唯一标记这条消息。这种写消息的方式是顺序写磁盘，这样保证了kafka的高吞吐量。
 
-**在topic被创建时，可以通过修改配置文件（$KAFKA_HOME/config/server.properties）来设置partition的数量，当一条消息被推送到broker中时，会根基partition的规则来选择具体的partition。如果这种规则足够合理，那么消息的分布将会非常均匀。
+在topic被创建时，可以通过修改配置文件（$KAFKA_HOME/config/server.properties）来设置partition的数量，当一条消息被推送到broker中时，会根基partition的规则来选择具体的partition。如果这种规则足够合理，那么消息的分布将会非常均匀。
 ![](/images/kafka1.png)
-```vb
 
+##Kafka文件存储机制
+在Kafka的文件系统里，topic下包含多个partition，每个partition作为一个目录，命名规则为topic名称+有序序号，有序序号从0开始到partition的总数量-1.
+
+而在Kafka的设计中，每个partition又可以细分为多个segment段数据文件中，这些数据文件只需要支持顺序读写，这样极大的提高了磁盘的利用率。每个segment文件由.index和.log两个文件组成，分别为segment的索引文件和数据文件。partition的segment文件从0开始，后面的每个segment文件名都是该文件最后一条消息的offset值（偏移量）。
+
+
+
+```java
+00000000000000000000.index
+00000000000000000000.log
+00000000000000170410.index
+00000000000000170410.log
+00000000000000239430.index
+00000000000000239430.log
 ```
+
