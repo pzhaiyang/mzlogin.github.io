@@ -81,3 +81,15 @@ producer发送数据到leader，leader写本地日志成功，返回客户端成
 有两种典型情况。acks=-1的情况下（如无特殊说明，以下acks都表示为参数request.required.acks），数据发送到leader, ISR的follower全部完成数据同步后，leader此时挂掉，那么会选举出新的leader，数据不会丢失。
 
 ![](/images/kafka6.png)
+
+## Leader选举
+当一个topic的leader挂掉后，Kafka会从当前leader维护的ISR中选出一台机器作为新的leader。这样保证kafka需要的冗余度较低，当当前topic有f+1个副本时，最多可以容忍有f个服务器不可用。而当当前ISR中所有服务器中都挂掉后，有2种可行的方案，一种是等待ISR中的某一个服务恢复，另外是立即选出一个服务作为leader(ISR外），2种方案无非是响应时间和副本数据不一致中的抉择，各有利弊。
+
+![](/images/kafka7.png)
+如上图的场景，当前partition的副本数为3，replica-0，replica-1，replica-2分别处在3个broker中，ISR=(0，1)。此时设置设置request.required.acks=-1, min.insync.replicas=2，unclean.leader.election.enable=false。
+如果此时replica-0挂掉，replica-1成为新的leader，但是由于min.insync.replicas=2，不能写入消息，可以取消息。此时可以尝试恢复replica-0，如果恢复成功，则系统正常，或者将min.insync.replicas=1，恢复写功能。
+
+但是如果replica-0挂掉后，replica-1也挂掉，此时ISR=(1),leader=-1。此时修复replica-0和replica-1，如果都能起来，则恢复服务。但是replica-0恢复，但是replica-1没有恢复，此时不能选出新的leader，因为设置了unclean.leader.election.enable=false，leader只能从ISR中去挑选，此时可以将其改为true，同时min.insync.replicas=1，恢复write服务。
+而replica-1恢复，replica-0不能恢复，则参考上面的情形。
+
+## Kafka的发送模式
