@@ -40,9 +40,44 @@ Kafka凭借着自身的优势，越来越受到互联网企业的青睐，唯品
 
 ## Kafka复制原理及同步方式
 ![](/images/kafka2.png)
+
 在partition中有2个概念要介绍一下，一个是LEO(Long End Offset)，及这个partition最后一条消息的偏移量，还有一个是HW（High Water Mark），是consumer能看到此partition的位置。
 
 为了提高消息的可靠性，每个topic的partition有N个副本（replicas），N被称为是topic的复制因子（replica fator）的个数。Kafka通过多副本机制实现故障自动转移，这样保证在Kafka集群中一个broker失效，仍然保证集群服务的可用性。其中在这N个replicas中，有一个replica为leader，其他的都是follower，leader处理partition的所有的读写请求，并定期去同步follower上的数据。
 如下图所示：
 ![](/images/kafka3.png)
 
+Kafka提供了数据复制算法保证。当leader发生故障挂掉后，会有一个新的leader被选举并接受客户端消息的写入。Kafka确保在副本同步队列中选出一个leader。leader负责维护并跟踪ISR(In-Sync Replicas的缩写，表示副本同步队列)中follow的滞后状态。当一条消息被写入后，消息提交滞后被复制到其他的follower，所以消息复制的效率受到最慢的follower的影响。如果一个follower滞后太多或者已经失效挂掉，这个follower将从ISR中被踢出。
+
+## ISR
+上面提到的ISR极大的增强了Kafka的可用性。默认情况下Kafka的replica的值为1，即只有唯一的leader，但是一般我们都会设置成大于1的数，即3，这个3就是所有副本个数AR(Assigned Replicas)。ISR是AR的一个子集，由leader负责维护，follower从leader同步数据有一定的延迟（包括延迟时间replica.lag.time.max.ms和延迟条数replica.lag.max.messages两个维度, 当前最新的版本0.10.x中只支持replica.lag.time.max.ms这个维度），超过这个阈值，follower就会从ISR中被踢出，存在OSR中（Outof-Sync Replicas），同时新加入的follower也是在OSR中，AR=OSR+ISR.
+
+Kafka 0.10.x版本后移除了replica.lag.max.messages参数，只保留了replica.lag.time.max.ms作为ISR中副本管理的参数。这样做是有原因的，因为replica.lag.max.messages这个参数有一定的歧义，这里指滞后的最大消息个数。这样设置在瞬时高峰流量时，producer每次发出的消息都超过4条，follower还没来得及同步就被判断滞后太多被踢出ISR，但是其实他们都是存活状态的，后面追赶上leader重新加入ISR。这样无疑增加了Kafka的性能损耗。
+
+
+下图介绍了当producer产生消息后，ISR及HW和LEO的流转过程：
+
+![](/images/kafka4.png)
+
+由此可见Kafka的复制机制并不是完全同步，也并非异步方式。同步方式认为当所有的follower都复制完，这条消息才算commit，这样极大的影响了Kafka的吞吐量。而异步方式认为只要消息被写入leader，就认为被commit，这样会很容易造成数据的丢失，例如当一条消息被写入leader，follower还没来得及同步，这时候leader突然宕机，这条数据就消失了。
+
+##  数据可靠性和持久性保证
+当producer向leader发送数据时，可以通过request.required.acks参数来设置数据可靠性的级别：
+
+1（默认）：这意味着producer在ISR中的leader已成功收到的数据并得到确认后发送下一条message。如果leader宕机了，则会丢失数据。
+0：这意味着producer无需等待来自broker的确认而继续发送下一批消息。这种情况下数据传输效率最高，但是数据可靠性确是最低的。
+-1：producer需要等待ISR中的所有follower都确认接收到数据后才算一次发送完成，可靠性最高。但是这样也不能保证数据不丢失，比如当ISR中只有leader时（前面ISR那一节讲到，ISR中的成员由于某些情况会增加也会减少，最少就只剩一个leader），这样就变成了acks=1的情况。
+
+接下来对acks=1和-1的两种情况进行详细分析：
+
+1. request.required.acks=1
+
+producer发送数据到leader，leader写本地日志成功，返回客户端成功；此时ISR中的副本还没有来得及拉取该消息，leader就宕机了，那么此次发送的消息就会丢失。
+![](/images/kafka5.png)
+2. request.required.acks=-1
+
+同步（Kafka默认为同步，即producer.type=sync）的发送模式，replication.factor>=2且min.insync.replicas>=2的情况下，不会丢失数据。
+
+有两种典型情况。acks=-1的情况下（如无特殊说明，以下acks都表示为参数request.required.acks），数据发送到leader, ISR的follower全部完成数据同步后，leader此时挂掉，那么会选举出新的leader，数据不会丢失。
+
+![](/images/kafka6.png)
