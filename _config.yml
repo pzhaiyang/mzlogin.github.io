@@ -89,13 +89,13 @@ comments_provider: gitment
 # !!!Important!!! Please modify infos below to yours
 # https://disqus.com
 disqus:
-    username: mzlogin
+    username: pzhaiyang
 # https://gentie.163.com
 netease_gentie:
     productKey: 560ed243b708465d82d5a0a5f3b83da1
 # https://imsun.net/posts/gitment-introduction/
 gitment:
-    owner: mzlogin
+    owner: pzhaiyang
     repo: blog-comments
     oauth:
         client_id: d2e1cbbd298958076462
