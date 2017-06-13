@@ -74,6 +74,7 @@ Kafka 0.10.x版本后移除了replica.lag.max.messages参数，只保留了repli
 
 producer发送数据到leader，leader写本地日志成功，返回客户端成功；此时ISR中的副本还没有来得及拉取该消息，leader就宕机了，那么此次发送的消息就会丢失。
 ![](/images/kafka5.png)
+
 2. request.required.acks=-1
 
 同步（Kafka默认为同步，即producer.type=sync）的发送模式，replication.factor>=2且min.insync.replicas>=2的情况下，不会丢失数据。
@@ -86,6 +87,7 @@ producer发送数据到leader，leader写本地日志成功，返回客户端成
 当一个topic的leader挂掉后，Kafka会从当前leader维护的ISR中选出一台机器作为新的leader。这样保证kafka需要的冗余度较低，当当前topic有f+1个副本时，最多可以容忍有f个服务器不可用。而当当前ISR中所有服务器中都挂掉后，有2种可行的方案，一种是等待ISR中的某一个服务恢复，另外是立即选出一个服务作为leader(ISR外），2种方案无非是响应时间和副本数据不一致中的抉择，各有利弊。
 
 ![](/images/kafka7.png)
+
 如上图的场景，当前partition的副本数为3，replica-0，replica-1，replica-2分别处在3个broker中，ISR=(0，1)。此时设置设置request.required.acks=-1, min.insync.replicas=2，unclean.leader.election.enable=false。
 如果此时replica-0挂掉，replica-1成为新的leader，但是由于min.insync.replicas=2，不能写入消息，可以取消息。此时可以尝试恢复replica-0，如果恢复成功，则系统正常，或者将min.insync.replicas=1，恢复写功能。
 
@@ -93,3 +95,6 @@ producer发送数据到leader，leader写本地日志成功，返回客户端成
 而replica-1恢复，replica-0不能恢复，则参考上面的情形。
 
 ## Kafka的发送模式
+
+kafka的发送模式有2种，一种是同步，一种是异步，通过设置producer.type参数来设置，producer.type=sync时，为同步方式，同时kafka默认的也是同步方式。producer.type=async这样会极大的提高kafka的性能，并且设置异步后可以batch发送消息，但是这样也会增加丢失数据的危险，所以为了数据的可靠性，一定要设置producer.type=sync。当以batch方式发送消息时，可以通过设置batch.num.messages参数，当内存中积累到一定消息后批量发送，这样可以减少网络请求和磁盘IO的次数，增加了kafka的效率。
+
