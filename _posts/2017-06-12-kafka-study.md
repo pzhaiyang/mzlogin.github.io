@@ -98,3 +98,28 @@ producer发送数据到leader，leader写本地日志成功，返回客户端成
 
 kafka的发送模式有2种，一种是同步，一种是异步，通过设置producer.type参数来设置，producer.type=sync时，为同步方式，同时kafka默认的也是同步方式。producer.type=async这样会极大的提高kafka的性能，并且设置异步后可以batch发送消息，但是这样也会增加丢失数据的危险，所以为了数据的可靠性，一定要设置producer.type=sync。当以batch方式发送消息时，可以通过设置batch.num.messages参数，当内存中积累到一定消息后批量发送，这样可以减少网络请求和磁盘IO的次数，增加了kafka的效率。
 
+## 消息传输保障
+
+Kafka基于produce和consumer之间的消息传输，有以下三种传输保障：
+
+At most once: 消息可能会丢，但绝不会重复传输
+At least once：消息绝不会丢，但可能会重复传输
+Exactly once：每条消息肯定会被传输一次且仅传输一次
+
+很好理解，当producer向broker传输消息时，由于Kafka良好的副本策略的支持，消息被commit后就不会丢失。但是由于网络通信等原因，如果producer向broker传输消息后不知道该条消息是否已经提交，这时producer会开启retry机制，这样就保证了At least once。
+
+而consumer从broker消费消息时，可以选择commit，该操作会在zookeeper记录该consumer在该partition下消费消息的offset，下次消费的时候就从该offset开始读取下一条消息。当然也可以选择自动commit。但是如果consumer在commit后如果还没来得及处理就宕机，那么这种就相当于at most once。如果处理完还没来得及commit就crash，恢复之后还会从上一条消息重复处理，这就相当于是at least once。这样都无法做到exactly once，这就需要引入消息去重机制。
+
+## 消息去重
+
+Kafka在文档中提及过GUID的概念，通过客户端算法生成每条消息的unique_id，映射到broker上的存储地址，通过GUID去提取消息的内容，这样也可以保证消息发送方的幂等保证，这样需要在broker上提供这样的去重模块，但是目前的版本现在尚未支持。
+
+不止Kafka， 类似RabbitMQ以及RocketMQ这类商业级中间件也未从自身去提供去重的机制。我们只能通过redis等去进行消息的去重。
+
+## Redis实现消息去重
+
+针对上文所说的，在单台机器中，当consumer从broker消费时，可以将topic+partition位置的offetset记录在本地文件中，下次重启时，读取到上一次的offset。如果在分布式环境中，则用redis代替，以topic+partition为key，以offset为value去存缓存。然后使用consumer.seek()方法指定到上次的offset位置。
+
+## 后话
+
+这篇文章是笔者在阅读了一篇技术博客后整理出的一篇文章，个人感觉对掌握kafka的数据可靠性策略很有帮助，所以在此基础上也参考了很多的文章整理出来的，希望对读者有所帮助。
