@@ -22,11 +22,10 @@ Kafka凭借着自身的优势，越来越受到互联网企业的青睐，唯品
 在topic被创建时，可以通过修改配置文件（$KAFKA_HOME/config/server.properties）来设置partition的数量，当一条消息被推送到broker中时，会根基partition的规则来选择具体的partition。如果这种规则足够合理，那么消息的分布将会非常均匀。
 ![](/images/kafka1.png)
 
-##Kafka文件存储机制
+## Kafka文件存储机制
 在Kafka的文件系统里，topic下包含多个partition，每个partition作为一个目录，命名规则为topic名称+有序序号，有序序号从0开始到partition的总数量-1.
 
 而在Kafka的设计中，每个partition又可以细分为多个segment段数据文件中，这些数据文件只需要支持顺序读写，这样极大的提高了磁盘的利用率。每个segment文件由.index和.log两个文件组成，分别为segment的索引文件和数据文件。partition的segment文件从0开始，后面的每个segment文件名都是该文件最后一条消息的offset值（偏移量）。
-
 
 
 ```java
@@ -37,4 +36,13 @@ Kafka凭借着自身的优势，越来越受到互联网企业的青睐，唯品
 00000000000000239430.index
 00000000000000239430.log
 ```
+
+
+## Kafka复制原理及同步方式
+![](/images/kafka2.png)
+在partition中有2个概念要介绍一下，一个是LEO(Long End Offset)，及这个partition最后一条消息的偏移量，还有一个是HW（High Water Mark），是consumer能看到此partition的位置。
+
+为了提高消息的可靠性，每个topic的partition有N个副本（replicas），N被称为是topic的复制因子（replica fator）的个数。Kafka通过多副本机制实现故障自动转移，这样保证在Kafka集群中一个broker失效，仍然保证集群服务的可用性。其中在这N个replicas中，有一个replica为leader，其他的都是follower，leader处理partition的所有的读写请求，并定期去同步follower上的数据。
+如下图所示：
+![](/images/kafka3.png)
 
