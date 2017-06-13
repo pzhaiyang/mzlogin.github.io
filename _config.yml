@@ -98,8 +98,8 @@ gitment:
     owner: pzhaiyang
     repo: blog-comments
     oauth:
-        client_id: d2e1cbbd298958076462
-        client_secret: b42a4178e5fd4a7cf63189ef4b1453b05c375709
+        client_id: 1ccf0192c22afe6627b3
+        client_secret: baa81e33de39241c7ee45a587058613209b61a68
 # 在使用其它评论组件时可点击显示 Disqus
 lazy_load_disqus : true
 
